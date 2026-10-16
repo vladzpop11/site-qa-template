@@ -30,18 +30,37 @@ test.describe('selftest: the in-page checks', () => {
     expect(good.scrollWidth).toBeLessThanOrEqual(good.clientWidth + 1);
   });
 
-  test('targets: a 16px button is too small, a 44px one is fine, an inline link in text is exempt', async ({ page: p }) => {
+  test('targets: a 16px button crowded by another is too small, a 44px one is fine, an inline link in text is exempt', async ({ page: p }) => {
     await p.setViewportSize({ width: 390, height: 800 });
     await p.setContent(
       page(`<h1>Targets</h1>
-        <button id="tiny" style="width:16px;height:16px;padding:0;border:0">x</button>
-        <button id="big" style="width:44px;height:44px">ok</button>
+        <div style="display:flex;gap:2px">
+          <button id="tiny" style="width:16px;height:16px;padding:0;border:0">x</button>
+          <button id="big" style="width:44px;height:44px">ok</button>
+        </div>
         <p>Read our long and helpful explanation about shoes and their many uses in the <a href="/t">terms</a> today.</p>`),
     );
     const f = await p.evaluate(layoutFacts);
     expect(f.smallTargets.join(' ')).toContain('button#tiny');
     expect(f.smallTargets.join(' ')).not.toContain('button#big');
     expect(f.smallTargets.join(' ')).not.toContain('terms');
+  });
+
+  test('targets: an undersized target with room around it passes (2.5.8 spacing), crowded ones fail', async ({ page: p }) => {
+    await p.setViewportSize({ width: 390, height: 800 });
+    await p.setContent(
+      page(`<h1>Spacing</h1>
+        <div style="position:relative;height:200px">
+          <a id="alone" href="/a" style="position:absolute;left:20px;top:20px;display:block;width:16px;height:16px">a</a>
+          <a id="pair1" href="/b" style="position:absolute;left:20px;top:100px;display:block;width:16px;height:16px">b</a>
+          <a id="pair2" href="/c" style="position:absolute;left:40px;top:100px;display:block;width:16px;height:16px">c</a>
+        </div>`),
+    );
+    const f = await p.evaluate(layoutFacts);
+    const flagged = f.smallTargets.join(' ');
+    expect(flagged, 'a lone 16px link with space around it meets the spacing exception').not.toContain('a#alone');
+    expect(flagged, 'two 16px links 20px apart are too crowded').toContain('a#pair1');
+    expect(flagged).toContain('a#pair2');
   });
 
   test('search facts are read from the rendered page', async ({ page: p }) => {

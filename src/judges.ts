@@ -71,7 +71,8 @@ export type LayoutFacts = { scrollWidth: number; clientWidth: number; overflowin
 
 /**
  * Collected in the page. Horizontal overflow (WCAG 1.4.10 Reflow at 320px), and, at phone width, interactive targets
- * smaller than 24×24 CSS px (WCAG 2.5.8, AA). Inline links inside text are exempt from 2.5.8 and skipped here.
+ * smaller than 24×24 CSS px that also fail 2.5.8's spacing exception (WCAG 2.5.8, AA). Inline links inside text are
+ * exempt from 2.5.8 and skipped here.
  */
 export function layoutFacts(): LayoutFacts {
   const doc = document.documentElement;
@@ -86,17 +87,33 @@ export function layoutFacts(): LayoutFacts {
     .slice(0, 5)
     .map(label);
   const inlineInText = (el: Element) => el.tagName === 'A' && getComputedStyle(el).display === 'inline' && (el.parentElement?.textContent?.trim().length ?? 0) > (el.textContent?.trim().length ?? 0) + 20;
-  const smallTargets = [...document.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]')]
-    .filter((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0 || inlineInText(el)) return false;
-      return r.width < 24 || r.height < 24;
+  const targets = [...document.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]')]
+    .map((el) => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ el, r }) => r.width > 0 && r.height > 0 && !inlineInText(el));
+  /**
+   * WCAG 2.5.8's spacing exception: an undersized target still passes when a 24px-diameter circle centred on it
+   * intersects no other target, and no other undersized target's circle.
+   */
+  const centre = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  const circleHitsRect = (c: { x: number; y: number }, r: DOMRect) => {
+    const dx = c.x - Math.max(r.left, Math.min(c.x, r.right));
+    const dy = c.y - Math.max(r.top, Math.min(c.y, r.bottom));
+    return dx * dx + dy * dy < 12 * 12;
+  };
+  const undersized = targets.filter(({ r }) => r.width < 24 || r.height < 24);
+  const smallTargets = undersized
+    .filter((t) => {
+      const c = centre(t.r);
+      const crowdedByTarget = targets.some((o) => o.el !== t.el && !o.el.contains(t.el) && !t.el.contains(o.el) && circleHitsRect(c, o.r));
+      const crowdedByCircle = undersized.some((o) => {
+        if (o.el === t.el) return false;
+        const oc = centre(o.r);
+        return Math.hypot(c.x - oc.x, c.y - oc.y) < 24;
+      });
+      return crowdedByTarget || crowdedByCircle;
     })
     .slice(0, 10)
-    .map((el) => {
-      const r = el.getBoundingClientRect();
-      return `${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`;
-    });
+    .map(({ el, r }) => `${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
   return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth, overflowing, smallTargets };
 }
 

@@ -1,5 +1,7 @@
 # site-qa-template
 
+[![selftest](https://github.com/vladzpop11/site-qa-template/actions/workflows/selftest.yml/badge.svg)](https://github.com/vladzpop11/site-qa-template/actions/workflows/selftest.yml)
+
 Passive quality checks for **any website you are allowed to test**. Fill in the blanks in `.env`, run one command,
 and every check walks the pages listed in the site's own sitemap, on a desktop and on a phone.
 
@@ -35,7 +37,7 @@ npm run report                 # the HTML report of the last run
 | --- | --- | --- | --- |
 | Accessibility | `tests/accessibility.spec.ts` | all | any axe violation at WCAG 2.0–2.2 A/AA |
 | Reflow | `tests/layout.spec.ts` | desktop | horizontal scrolling at 320 CSS px (WCAG 1.4.10) |
-| Phone layout | `tests/layout.spec.ts` | phone, iphone | overflow at the phone's width; targets under 24×24px (WCAG 2.5.8) |
+| Phone layout | `tests/layout.spec.ts` | phone, iphone | overflow at the phone's width; targets under 24×24px that also fail 2.5.8's spacing exception (WCAG 2.5.8) |
 | Performance | `tests/performance.spec.ts` | all | LCP over 2.5s or CLS over 0.1 (one lab load per page) |
 | Errors | `tests/console.spec.ts` | all | uncaught exceptions, `console.error`, a 4xx/5xx for a script, style, image, font or API call |
 | Security headers | `tests/headers.spec.ts` | desktop | no HSTS (https), CSP, nosniff, framing protection or Referrer-Policy; a disclosing `X-Powered-By`; cookies without Secure/SameSite, session-like cookies without HttpOnly |
@@ -82,6 +84,30 @@ open no page at all fails rather than passing on nothing.
   alt, a 1000px block at 320px, a 16px button, a layout shift.
 
 A broken measurement and a clean site both look green, so run the selftests after changing anything in `src/`.
+
+## Status
+
+- **19 offline selftests**, run on every push (the badge above).
+- **Tried on a real site** in October 2026, on a staging site the author was authorised to test: six pages, desktop
+  and phone. Every page was opened and judged. It reported broken internal links, missing security headers, axe
+  violations (contrast, accessible names, a scrollable region keyboard users could not reach), a layout shift of 0.34
+  and missing meta descriptions. Each was confirmed real. The run also exposed two weaknesses of the template, both now
+  fixed:
+  - the target-size check ignored WCAG 2.5.8's spacing exception;
+  - a first run reported a missing visual baseline as a change.
+
+## How this was made
+
+I built this in October 2026 together with Claude, Anthropic's AI assistant, and the commits say so
+(`Co-Authored-By: Claude`). The split:
+- **Mine:** which checks to include, the safety model (only listed hosts, passive only, polite defaults) and the
+  rule that every check proves itself on planted examples before it is trusted.
+- **Written with the assistant:** the code.
+- **Checked against something other than either of us:** the selftests. They have already caught one measurement bug
+  of the assistant's: layout shift could not be read after the fact on a page built in the test.
+
+The approach comes from my work as a QA engineer on a larger, site-specific test suite. None of that suite's code, data
+or findings is in this repository.
 
 ## Layout
 

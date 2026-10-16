@@ -1,0 +1,25 @@
+# Proves the checks on every push: the typecheck, then the offline selftests (planted examples, no network).
+# It never contacts a website. Running the checks against a real site needs a TARGET_URL you are allowed to test.
+name: selftest
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run selftest

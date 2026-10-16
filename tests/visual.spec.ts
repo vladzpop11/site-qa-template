@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { test, expect, visit } from '../src/fixtures';
 import { readPages } from '../src/sitemap';
 
@@ -10,12 +11,19 @@ import { readPages } from '../src/sitemap';
 test('every page looks as it did when its baseline was approved', async ({ page }, testInfo) => {
   const pages = readPages();
   test.setTimeout(Math.max(60_000, pages.length * 45_000));
+  const missing: string[] = [];
   for (const url of pages) {
     const name = (new URL(url).pathname.replace(/^\/|\/$/g, '').replace(/[^a-z0-9]+/gi, '-') || 'home') + '.png';
     await test.step(name, async () => {
+      // No approved baseline yet: say so, rather than reporting a change from something that does not exist.
+      if (!fs.existsSync(testInfo.snapshotPath(name)) && testInfo.config.updateSnapshots === 'none') {
+        missing.push(new URL(url).pathname);
+        return;
+      }
       await visit(page, url);
       await expect.soft(page, `${new URL(url).pathname} changed since its baseline`).toHaveScreenshot(name, { fullPage: true });
     });
   }
   testInfo.annotations.push({ type: 'pages', description: String(pages.length) });
+  expect(missing, 'these pages have no approved baseline yet: look at them, then record them with `npm run baseline`').toEqual([]);
 });
