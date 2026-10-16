@@ -98,16 +98,23 @@ A broken measurement and a clean site both look green, so run the selftests afte
 
 ## How this was made
 
-I built this in October 2026 together with Claude, Anthropic's AI assistant, and the commits say so
-(`Co-Authored-By: Claude`). The split:
-- **Mine:** which checks to include, the safety model (only listed hosts, passive only, polite defaults) and the
-  rule that every check proves itself on planted examples before it is trusted.
-- **Written with the assistant:** the code.
-- **Checked against something other than either of us:** the selftests. They have already caught one measurement bug
-  of the assistant's: layout shift could not be read after the fact on a page built in the test.
+I designed this and built it with Claude, Anthropic's AI assistant, in October 2026. The commits are co-authored to say
+so.
 
-The approach comes from my work as a QA engineer on a larger, site-specific test suite. None of that suite's code, data
-or findings is in this repository.
+- **The requirements and the method are mine:**
+  - it runs on any site by filling in blanks;
+  - it contacts only the hosts you list, and stays passive;
+  - it never trusts a green that could mean "measured nothing". Every check refuses to pass when it could open no page,
+    and every rule is proven on a planted example before it is believed.
+- **The code was written with the assistant**, to those requirements.
+- **The verification rests on neither of us.** Each of the 19 selftests plants a known fault, and the check must catch it
+  and pass the clean version. They caught a measurement problem during development. A trial on a real site then
+  exposed two gaps, both fixed:
+  - the tap-target check ignored WCAG 2.5.8's spacing exception;
+  - a first run reported a missing visual baseline as a change.
+
+The method comes from my work as a QA engineer on a larger, site-specific test suite. None of that suite's code, data or
+findings is in this repository.
 
 ## Layout
 
