@@ -1,0 +1,23 @@
+{
+  "name": "site-qa-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Passive quality checks for any website you are allowed to test: accessibility, reflow, phone layout, performance, console errors, security headers, links, SEO, visual snapshots.",
+  "scripts": {
+    "test": "playwright test --project=desktop --project=phone",
+    "test:desktop": "playwright test --project=desktop",
+    "test:phone": "playwright test --project=phone",
+    "test:iphone": "playwright test --project=iphone",
+    "baseline": "playwright test --project=desktop --project=phone visual --update-snapshots=missing",
+    "selftest": "playwright test --project=selftest",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "dotenv": "^18.0.8",
+    "typescript": "^7.0.2"
+  }
+}
